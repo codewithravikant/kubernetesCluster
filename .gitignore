@@ -1,0 +1,55 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+dist/
+*.log
+npm-debug.log*
+
+# Env / local overrides
+.env
+.env.*
+!.env.example
+
+# Host-side logs
+logs/
+
+# Backups / local artifacts
+*.tar.gz
+*.bak
+.backup-cache/
+.restore-staging/
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Local-only review sheet
+QnA.MD
+
+# Cursor local project brief
+.cursor/project-info.local.md
+!.cursor/project-info.local.md.example
+!.cursor/rules/
+
+# Local working plans
+.cursor/plans/
+
+# Track project docs
+!docs/
+!docs/**/*.md
+
+# Personal operator notes
+docs/**/*.local.md
+
+# Minikube / local kube
+.kube/
+.minikube/

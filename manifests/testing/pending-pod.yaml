@@ -1,0 +1,21 @@
+# Demo: PodPendingTooLong — requests more than the node has.
+# kubectl apply -f manifests/testing/pending-pod.yaml
+# kubectl delete -f manifests/testing/pending-pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pending-demo
+  namespace: app
+  labels:
+    app: pending-demo
+spec:
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.9
+      resources:
+        requests:
+          cpu: "20"
+          memory: 64Gi
+        limits:
+          cpu: "20"
+          memory: 64Gi

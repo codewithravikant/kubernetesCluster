@@ -1,0 +1,43 @@
+// Cluster Chronicles — rollback job (chronicles-rollback)
+pipeline {
+  agent {
+    kubernetes {
+      yaml '''
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: chronicles-rollback-agent
+spec:
+  serviceAccountName: jenkins
+  containers:
+    - name: kubectl
+      image: bitnamilegacy/kubectl:1.31.4
+      command: ["cat"]
+      tty: true
+      securityContext:
+        runAsUser: 1000
+'''
+    }
+  }
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+  }
+  stages {
+    stage('Rollback') {
+      steps {
+        container('kubectl') {
+          sh '''
+            set -eu
+            kubectl rollout undo deployment/backend -n app
+            kubectl rollout undo deployment/frontend -n app
+            kubectl rollout status deployment/backend -n app --timeout=180s
+            kubectl rollout status deployment/frontend -n app --timeout=180s
+            echo "Rollback complete."
+          '''
+        }
+      }
+    }
+  }
+}

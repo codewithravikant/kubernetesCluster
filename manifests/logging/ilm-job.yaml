@@ -1,0 +1,63 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: elasticsearch-ilm
+  namespace: logging
+  labels:
+    app: elasticsearch-ilm
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 6
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: ilm
+          image: curlimages/curl:8.10.1
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              ES=http://elasticsearch-http.logging.svc.cluster.local:9200
+              echo "Waiting for Elasticsearch..."
+              for i in $(seq 1 60); do
+                if curl -sf "$ES/_cluster/health" >/dev/null; then break; fi
+                sleep 5
+              done
+              curl -sf -X PUT "$ES/_ilm/policy/chronicles-logs-policy" -H 'Content-Type: application/json' -d '{
+                "policy": {
+                  "phases": {
+                    "hot": {
+                      "actions": {
+                        "rollover": { "max_age": "7d", "max_size": "5gb" }
+                      }
+                    },
+                    "delete": {
+                      "min_age": "14d",
+                      "actions": { "delete": {} }
+                    }
+                  }
+                }
+              }'
+              curl -sf -X PUT "$ES/_index_template/chronicles-logs" -H 'Content-Type: application/json' -d '{
+                "index_patterns": ["chronicles-*"],
+                "template": {
+                  "settings": {
+                    "index.lifecycle.name": "chronicles-logs-policy",
+                    "index.lifecycle.rollover_alias": "chronicles"
+                  }
+                }
+              }'
+              # Bootstrap write alias only if missing (idempotent re-apply).
+              if ! curl -sf "$ES/_alias/chronicles" >/dev/null 2>&1; then
+                curl -sf -X PUT "$ES/chronicles-000001" -H 'Content-Type: application/json' -d '{
+                  "aliases": {
+                    "chronicles": { "is_write_index": true }
+                  }
+                }'
+                echo "Bootstrapped chronicles-000001 with write alias chronicles."
+              else
+                echo "Write alias chronicles already exists."
+              fi
+              echo "ILM policy chronicles-logs-policy applied (delete after 14d, write alias chronicles)."

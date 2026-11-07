@@ -1,0 +1,13 @@
+# Minikube profile sizing (dashboard edits this file).
+# Default sized for a typical Docker Desktop host (4 CPUs / ~10 GB).
+# Cap enforced by scripts and dashboard: cpus ≤ 8, memory_mb ≤ 18432.
+# On a larger lab host (16 threads / 30 GB) you can raise to 6 / 16384.
+profile: chronicles
+driver: docker
+cpus: 4
+memory_mb: 10240
+disk_size_gb: 40
+kubernetes_version: stable
+addons:
+  - ingress
+  - metrics-server

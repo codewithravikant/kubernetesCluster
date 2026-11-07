@@ -1,0 +1,54 @@
+# Explicit PVs for review demos (RWO + Retain).
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-jenkins
+  labels:
+    type: local
+    app: jenkins
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: chronicles-retain
+  hostPath:
+    path: /mnt/data/jenkins
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-prometheus
+  labels:
+    type: local
+    app: prometheus
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: chronicles-retain
+  hostPath:
+    path: /mnt/data/prometheus
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-grafana
+  labels:
+    type: local
+    app: grafana
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: chronicles-retain
+  hostPath:
+    path: /mnt/data/grafana
+    type: DirectoryOrCreate

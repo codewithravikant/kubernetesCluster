@@ -1,0 +1,7 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Do not set a global namespace — NetworkPolicies live in app;
+# Jenkins SA/Roles span cicd + app (see cicd-rbac.yaml).
+resources:
+  - network-policies.yaml
+  - cicd-rbac.yaml

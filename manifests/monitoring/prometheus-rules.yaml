@@ -1,0 +1,202 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: chronicles-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+    app: cluster-chronicles
+spec:
+  groups:
+    - name: chronicles.node
+      rules:
+        - alert: NodeCPUHigh
+          expr: |
+            100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "A node is working too hard"
+            description: "{{ $labels.instance }} has used more than 80% of its CPU for over 5 minutes. Builds and pods on that machine will slow down."
+        - alert: NodeDiskLow
+          expr: |
+            (
+              node_filesystem_avail_bytes{fstype!~"tmpfs|squashfs|ramfs", mountpoint!~"/run.*|/var/lib/docker.*|/var/lib/kubelet.*"}
+              / node_filesystem_size_bytes{fstype!~"tmpfs|squashfs|ramfs", mountpoint!~"/run.*|/var/lib/docker.*|/var/lib/kubelet.*"}
+            ) * 100 < 20
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "A node is running out of disk"
+            description: "Disk {{ $labels.mountpoint }} on {{ $labels.instance }} has less than 20% free. Logs, images, and builds can fail when the disk fills up."
+        - alert: NodeMemoryHigh
+          expr: |
+            (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "A node is almost out of memory"
+            description: "{{ $labels.instance }} has stayed above 90% memory for more than 5 minutes. The node may start killing pods."
+    - name: chronicles.pods
+      rules:
+        - alert: PodRestartingTooOften
+          expr: |
+            increase(kube_pod_container_status_restarts_total[15m]) > 3
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "A pod keeps crashing and starting again"
+            description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} restarted more than 3 times in 15 minutes. Something inside it is failing."
+        - alert: ContainerMemoryHigh
+          expr: |
+            (
+              container_memory_working_set_bytes{container!="", container!="POD"}
+              / container_spec_memory_limit_bytes{container!="", container!="POD"}
+            ) * 100 > 80
+            and container_spec_memory_limit_bytes{container!="", container!="POD"} > 0
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "A container is close to its memory limit"
+            description: "Container {{ $labels.container }} in {{ $labels.namespace }}/{{ $labels.pod }} is using more than 80% of the memory it is allowed. Kubernetes may kill it."
+        - alert: PodPendingTooLong
+          expr: |
+            kube_pod_status_phase{phase="Pending"} == 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "A pod is stuck and has not started"
+            description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} has been Pending for more than 5 minutes. It is not running yet."
+    - name: chronicles.cluster
+      rules:
+        - alert: KubernetesAPIServerDown
+          expr: |
+            max(up{job=~".*apiserver.*"}) == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "The cluster API is unreachable"
+            description: "Prometheus cannot reach the Kubernetes API. Deploys and kubectl will fail until it comes back."
+    - name: chronicles.logging
+      rules:
+        - alert: ElasticsearchYellow
+          expr: |
+            elasticsearch_cluster_health_status{color="yellow"} == 1
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Elasticsearch is yellow"
+            description: "The log store is yellow. Search still works, but a copy of some log data is missing."
+        - alert: ElasticsearchRed
+          expr: |
+            elasticsearch_cluster_health_status{color="red"} == 1
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Elasticsearch is red"
+            description: "The log store is red. Some logs cannot be written or read."
+        - alert: FluentBitErrors
+          expr: |
+            increase(fluentbit_output_errors_total[5m]) > 0
+            or increase(fluentbit_output_retries_failed_total[5m]) > 0
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Log collection is failing"
+            description: "Fluent Bit is hitting errors while collecting or shipping logs. New logs may be missing in Kibana."
+    - name: chronicles.jenkins
+      rules:
+        - alert: JenkinsOff
+          expr: |
+            kube_pod_status_phase{namespace="cicd", pod="jenkins-0", phase="Running"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Jenkins is off"
+            description: "Jenkins is not running. New commits will sit in git until Jenkins starts."
+        - alert: JenkinsCrash
+          expr: |
+            kube_pod_init_container_status_waiting_reason{namespace="cicd", pod="jenkins-0", reason="CrashLoopBackOff"} == 1
+            or kube_pod_container_status_waiting_reason{namespace="cicd", pod="jenkins-0", reason="CrashLoopBackOff"} == 1
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Jenkins crashed"
+            description: "Jenkins starts, fails, and tries again. Builds will not run while it is crash-looping."
+        - alert: JenkinsRestarted
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="cicd", pod="jenkins-0"}[10m]) > 0
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Jenkins restarted"
+            description: "The Jenkins container restarted. A build that was running may have been cut off."
+    - name: chronicles.ingress
+      rules:
+        - alert: IngressControllerDown
+          expr: |
+            sum(kube_pod_status_ready{namespace="ingress-nginx", pod=~"ingress-nginx-controller-.+", condition="true"}) == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "The Ingress controller is down"
+            description: "No ready ingress-nginx controller pod. External HTTP to the frontend stops until it is running again."
+        - alert: IngressFrontendDown
+          expr: |
+            probe_success{ingress="chronicles", check="frontend"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "The frontend is not reachable through Ingress"
+            description: "A probe of http://chronicles.local/ failed. The hostname, controller, or frontend Service is not serving HTTP 200."
+        - alert: IngressBackendPathDown
+          expr: |
+            probe_success{ingress="chronicles", check="frontend_backend"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "The frontend cannot reach the backend through Ingress"
+            description: "A probe of http://chronicles.local/api/health failed. The frontend proxy or the backend health check is failing."
+        - alert: IngressHostnameDown
+          expr: |
+            probe_success{ingress="chronicles", check="dns"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "chronicles.local does not resolve in the cluster"
+            description: "CoreDNS did not answer chronicles.local. In-cluster clients cannot open the Ingress hostname."
+        - alert: Ingress5xxHigh
+          expr: |
+            sum(increase(nginx_ingress_controller_requests{status=~"5.."}[5m])) > 5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Ingress is returning server errors"
+            description: "The controller returned more than 5 HTTP 5xx responses in 5 minutes."
+        - alert: IngressFrontendEndpointsEmpty
+          expr: |
+            sum(kube_endpointslice_endpoints{namespace="app", endpointslice=~"frontend-.+", ready="true"}) == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "The Ingress backend has no ready endpoints"
+            description: "Service frontend in namespace app has no ready endpoints. Ingress has nowhere to send traffic."

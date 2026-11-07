@@ -1,0 +1,22 @@
+# Demo: ContainerMemoryHigh — limit 128Mi, allocate ~110Mi
+# kubectl apply -f manifests/testing/memory-hog.yaml
+# kubectl delete -f manifests/testing/memory-hog.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: memory-hog-demo
+  namespace: app
+  labels:
+    app: memory-hog-demo
+spec:
+  containers:
+    - name: stress
+      image: polinux/stress:latest
+      args: ["--vm", "1", "--vm-bytes", "110M", "--vm-hang", "360"]
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 200m
+          memory: 128Mi

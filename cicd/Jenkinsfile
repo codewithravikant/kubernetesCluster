@@ -1,0 +1,189 @@
+// Cluster Chronicles — in-cluster CI/CD
+// Jobs: chronicles-app (this file), chronicles-rollback (Jenkinsfile.rollback)
+// Stages: lint → test → audit → build (Kaniko) → Trivy → deploy → smoke
+
+pipeline {
+  agent {
+    kubernetes {
+      yaml '''
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: chronicles-jenkins-agent
+spec:
+  serviceAccountName: jenkins
+  volumes:
+    - name: chronicles-src
+      hostPath:
+        path: /mnt/data/chronicles-src
+        type: Directory
+  containers:
+    - name: node
+      image: node:22.23.3-alpine
+      command: ["cat"]
+      tty: true
+      volumeMounts:
+        - name: chronicles-src
+          mountPath: /chronicles-src
+          readOnly: true
+      resources:
+        requests:
+          cpu: 200m
+          memory: 512Mi
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:v1.23.2-debug
+      command: ["cat"]
+      tty: true
+      volumeMounts:
+        - name: chronicles-src
+          mountPath: /chronicles-src
+          readOnly: true
+    - name: trivy
+      image: aquasec/trivy:0.57.1
+      command: ["cat"]
+      tty: true
+    - name: kubectl
+      image: bitnamilegacy/kubectl:1.31.4
+      command: ["cat"]
+      tty: true
+      securityContext:
+        runAsUser: 1000
+'''
+    }
+  }
+
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+    buildDiscarder(logRotator(numToKeepStr: '20'))
+  }
+
+  environment {
+    REGISTRY = 'registry.cicd.svc.cluster.local:5000'
+    BACKEND_IMG = 'chronicles-backend'
+    FRONTEND_IMG = 'chronicles-frontend'
+  }
+
+  stages {
+    stage('Load local source') {
+      steps {
+        container('node') {
+          sh '''
+            set -eu
+            test -d /chronicles-src/app
+            rm -rf app scripts
+            cp -a /chronicles-src/app /chronicles-src/scripts .
+          '''
+        }
+      }
+    }
+
+    stage('Resolve tag') {
+      steps {
+        script {
+          env.IMAGE_TAG = "b${env.BUILD_NUMBER}"
+          currentBuild.displayName = "#${env.BUILD_NUMBER} ${env.IMAGE_TAG}"
+          currentBuild.description = "local build ${env.IMAGE_TAG}"
+          echo "Building tag ${env.IMAGE_TAG}"
+        }
+      }
+    }
+
+    stage('Lint & test') {
+      steps {
+        container('node') {
+          dir('app/backend') {
+            sh 'npm ci --no-audit --no-fund && npm run lint && npm test'
+          }
+          dir('app/frontend') {
+            sh 'npm ci --no-audit --no-fund && npm run lint && npm test'
+          }
+        }
+      }
+    }
+
+    stage('Audit') {
+      steps {
+        container('node') {
+          dir('app/backend') {
+            sh 'npm audit --omit=dev --audit-level=high || true'
+          }
+        }
+      }
+    }
+
+    stage('Build & push') {
+      steps {
+        container('kaniko') {
+          sh """
+            /kaniko/executor \\
+              --context=\${WORKSPACE}/app/backend \\
+              --dockerfile=\${WORKSPACE}/app/backend/Dockerfile \\
+              --destination=\${REGISTRY}/\${BACKEND_IMG}:\${IMAGE_TAG} \\
+              --insecure --skip-tls-verify
+            /kaniko/executor \\
+              --context=\${WORKSPACE}/app/frontend \\
+              --dockerfile=\${WORKSPACE}/app/frontend/Dockerfile \\
+              --destination=\${REGISTRY}/\${FRONTEND_IMG}:\${IMAGE_TAG} \\
+              --insecure --skip-tls-verify
+          """
+        }
+      }
+    }
+
+    stage('Trivy') {
+      steps {
+        container('trivy') {
+          sh """
+            trivy image --exit-code 1 --severity CRITICAL \\
+              \${REGISTRY}/\${BACKEND_IMG}:\${IMAGE_TAG}
+            trivy image --exit-code 1 --severity CRITICAL \\
+              \${REGISTRY}/\${FRONTEND_IMG}:\${IMAGE_TAG}
+          """
+        }
+      }
+    }
+
+    stage('Deploy') {
+      steps {
+        container('kubectl') {
+          sh """
+            kubectl set image deployment/backend -n app \\
+              backend=\${REGISTRY}/\${BACKEND_IMG}:\${IMAGE_TAG}
+            kubectl set image deployment/frontend -n app \\
+              frontend=\${REGISTRY}/\${FRONTEND_IMG}:\${IMAGE_TAG}
+            kubectl rollout status deployment/backend -n app --timeout=180s
+            kubectl rollout status deployment/frontend -n app --timeout=180s
+          """
+        }
+      }
+    }
+
+    stage('Smoke') {
+      steps {
+        container('kubectl') {
+          sh '''
+            kubectl run smoke-curl --rm -i --restart=Never -n cicd \\
+              --image=curlimages/curl:8.10.1 -- \\
+              curl -sf http://frontend.app.svc.cluster.local/ >/dev/null
+            kubectl run smoke-api --rm -i --restart=Never -n cicd \\
+              --image=curlimages/curl:8.10.1 -- \\
+              curl -sf http://backend.app.svc.cluster.local:3000/health
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    failure {
+      container('kubectl') {
+        sh '''
+          kubectl rollout undo deployment/backend -n app || true
+          kubectl rollout undo deployment/frontend -n app || true
+        '''
+      }
+    }
+  }
+}

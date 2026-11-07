@@ -1,0 +1,78 @@
+# Helm values for jenkinsci/jenkins
+# helm upgrade --install jenkins jenkins/jenkins -n cicd -f manifests/cicd/jenkins-values.yaml
+#
+# Pipeline scripts come from ConfigMap jenkins-pipelines (created by make chronicles).
+# App source for builds is synced to hostPath /mnt/data/chronicles-src (no remote SCM).
+
+controller:
+  admin:
+    username: admin
+    password: devops
+  serviceType: ClusterIP
+  servicePort: 8080
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      cpu: "1"
+      memory: 1536Mi
+  installPlugins:
+    - kubernetes:4560.vc25b_83890c34
+    - workflow-aggregator:608.v67378e9d3db_1
+    - timestamper:1.28
+    - configuration-as-code:2136.veb_3a_554550b_f
+    - job-dsl:3732.v9a_c49a_61a_313
+    - pipeline-model-definition:2.2293.v6e7193cec599
+    - pipeline-stage-view:2.38
+  JCasC:
+    defaultConfig: true
+    configScripts:
+      chronicles: |
+        jenkins:
+          systemMessage: "Cluster Chronicles CI"
+        jobs:
+          - script: |
+              pipelineJob('chronicles-app') {
+                definition {
+                  cps {
+                    script(new File('/var/jenkins_pipelines/Jenkinsfile').getText('UTF-8'))
+                    sandbox()
+                  }
+                }
+              }
+              pipelineJob('chronicles-rollback') {
+                definition {
+                  cps {
+                    script(new File('/var/jenkins_pipelines/Jenkinsfile.rollback').getText('UTF-8'))
+                    sandbox()
+                  }
+                }
+              }
+  sidecars:
+    configAutoReload:
+      enabled: false
+
+persistence:
+  enabled: true
+  existingClaim: jenkins
+  storageClass: chronicles-retain
+  volumes:
+    - name: jenkins-pipelines
+      configMap:
+        name: jenkins-pipelines
+        defaultMode: 0444
+  mounts:
+    - name: jenkins-pipelines
+      mountPath: /var/jenkins_pipelines
+      readOnly: true
+
+serviceAccount:
+  create: false
+  name: jenkins
+
+rbac:
+  create: false
+
+agent:
+  enabled: false

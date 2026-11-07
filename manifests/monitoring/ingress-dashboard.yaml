@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chronicles-ingress-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  ingress.json: |
+    {
+      "title": "Ingress",
+      "uid": "chronicles-ingress",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Controller ready",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "targets": [{"expr": "sum(kube_pod_status_ready{namespace=\"ingress-nginx\",pod=~\"ingress-nginx-controller-.+\",condition=\"true\"})", "legendFormat": "ready"}]
+        },
+        {
+          "type": "stat",
+          "title": "Controller restarts",
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+          "targets": [{"expr": "sum(kube_pod_container_status_restarts_total{namespace=\"ingress-nginx\",pod=~\"ingress-nginx-controller-.+\"})", "legendFormat": "restarts"}]
+        },
+        {
+          "type": "stat",
+          "title": "Scrape up",
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+          "targets": [{"expr": "max(up{namespace=\"ingress-nginx\"})", "legendFormat": "up"}]
+        },
+        {
+          "type": "stat",
+          "title": "Frontend endpoints ready",
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+          "targets": [{"expr": "sum(kube_endpointslice_endpoints{namespace=\"app\",endpointslice=~\"frontend-.+\",ready=\"true\"})", "legendFormat": "ready"}]
+        },
+        {
+          "type": "timeseries",
+          "title": "Controller CPU",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+          "targets": [{"expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"ingress-nginx\",container=\"controller\",pod=~\"ingress-nginx-controller-.+\"}[5m]))", "legendFormat": "cores"}]
+        },
+        {
+          "type": "timeseries",
+          "title": "Controller memory",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+          "targets": [{"expr": "sum(container_memory_working_set_bytes{namespace=\"ingress-nginx\",container=\"controller\",pod=~\"ingress-nginx-controller-.+\"})", "legendFormat": "bytes"}]
+        },
+        {
+          "type": "timeseries",
+          "title": "Request rate",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+          "targets": [{"expr": "sum by (status) (rate(nginx_ingress_controller_requests[5m]))", "legendFormat": "{{status}}"}]
+        },
+        {
+          "type": "timeseries",
+          "title": "Response latency p95",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+          "targets": [{"expr": "histogram_quantile(0.95, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket[5m])))", "legendFormat": "p95"}]
+        },
+        {
+          "type": "timeseries",
+          "title": "4xx rate",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+          "targets": [{"expr": "sum(rate(nginx_ingress_controller_requests{status=~\"4..\"}[5m])) or vector(0)", "legendFormat": "4xx"}]
+        },
+        {
+          "type": "timeseries",
+          "title": "5xx rate",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+          "targets": [{"expr": "sum(rate(nginx_ingress_controller_requests{status=~\"5..\"}[5m])) or vector(0)", "legendFormat": "5xx"}]
+        },
+        {
+          "type": "timeseries",
+          "title": "End-to-end probes",
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 28},
+          "targets": [{"expr": "probe_success{ingress=\"chronicles\"}", "legendFormat": "{{check}}"}]
+        }
+      ]
+    }

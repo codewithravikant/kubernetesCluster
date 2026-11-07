@@ -1,0 +1,25 @@
+# Local / single-host reference compose.
+# Cluster deploy uses Minikube manifests under manifests/app/.
+
+services:
+  backend:
+    build:
+      context: ./backend
+    image: chronicles-backend:latest
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    image: chronicles-frontend:latest
+    ports:
+      - "8080:80"
+    environment:
+      BACKEND_HOST: backend
+      BACKEND_PORT: "3000"
+      WEB_SERVER: local
+    depends_on:
+      - backend
+    restart: unless-stopped

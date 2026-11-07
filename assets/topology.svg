@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" role="img" aria-labelledby="title desc">
+  <title id="title">Cluster Chronicles topology</title>
+  <desc id="desc">Host Docker to Minikube with Ingress HTTP path, monitoring scrape, logging, and cicd deploy lanes</desc>
+  <defs>
+    <marker id="arrow-http" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#0f8f84"/></marker>
+    <marker id="arrow-member" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#64748b"/></marker>
+    <marker id="arrow-scrape" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7c3aed"/></marker>
+    <marker id="arrow-logs" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#059669"/></marker>
+    <marker id="arrow-deploy" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#be123c"/></marker>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="560" fill="url(#bg)"/>
+  <text x="480" y="30" text-anchor="middle" font-family="Georgia, serif" font-size="20" fill="#0f172a">Cluster Chronicles — Topology</text>
+  <text x="480" y="50" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#64748b">Host Docker · Minikube profile chronicles · single node</text>
+
+  <!-- Host -->
+  <rect x="28" y="180" width="110" height="52" rx="8" fill="#fff" stroke="#64748b" stroke-width="2"/>
+  <text x="83" y="202" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" fill="#0f172a">Host</text>
+  <text x="83" y="218" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#64748b">Docker Engine</text>
+
+  <!-- Minikube -->
+  <rect x="178" y="180" width="120" height="52" rx="8" fill="#fff" stroke="#64748b" stroke-width="2"/>
+  <text x="238" y="202" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" fill="#0f172a">Minikube</text>
+  <text x="238" y="218" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#64748b">Kubernetes</text>
+
+  <!-- Ingress -->
+  <rect x="338" y="180" width="110" height="52" rx="8" fill="#fff" stroke="#0f766e" stroke-width="2"/>
+  <text x="393" y="202" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" fill="#0f172a">Ingress</text>
+  <text x="393" y="218" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#64748b">nginx addon</text>
+
+  <!-- app ns frame -->
+  <rect x="480" y="70" width="300" height="170" rx="10" fill="#f0f9ff" stroke="#0369a1" stroke-width="2" stroke-dasharray="5 4"/>
+  <text x="496" y="92" font-family="system-ui,sans-serif" font-size="12" font-weight="600" fill="#0369a1">ns: app</text>
+
+  <rect x="500" y="118" width="120" height="52" rx="8" fill="#fff" stroke="#0369a1" stroke-width="1.5"/>
+  <text x="560" y="140" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" fill="#0f172a">frontend</text>
+  <text x="560" y="156" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#64748b">:80 · ×2 + HPA</text>
+
+  <rect x="650" y="118" width="110" height="52" rx="8" fill="#fff" stroke="#b45309" stroke-width="2"/>
+  <text x="705" y="140" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" fill="#0f172a">backend</text>
+  <text x="705" y="156" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#64748b">:3000 · ×1</text>
+
+  <!-- side namespaces -->
+  <rect x="300" y="320" width="150" height="70" rx="8" fill="#fff" stroke="#7c3aed" stroke-width="2"/>
+  <text x="375" y="346" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" font-weight="600" fill="#7c3aed">ns: monitoring</text>
+  <text x="375" y="366" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#0f172a">Prometheus · Grafana</text>
+  <text x="375" y="382" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#64748b">Alertmanager</text>
+
+  <rect x="490" y="320" width="150" height="70" rx="8" fill="#fff" stroke="#059669" stroke-width="2"/>
+  <text x="565" y="346" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" font-weight="600" fill="#059669">ns: logging</text>
+  <text x="565" y="366" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#0f172a">Fluent Bit · ES ×2</text>
+  <text x="565" y="382" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#64748b">Kibana · ILM 14d</text>
+
+  <rect x="680" y="320" width="150" height="70" rx="8" fill="#fff" stroke="#be123c" stroke-width="2"/>
+  <text x="755" y="346" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" font-weight="600" fill="#be123c">ns: cicd</text>
+  <text x="755" y="366" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#0f172a">Jenkins · Kaniko</text>
+  <text x="755" y="382" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#64748b">registry :5000</text>
+
+  <!-- membership / HTTP -->
+  <line x1="138" y1="206" x2="174" y2="206" stroke="#64748b" stroke-width="2" stroke-dasharray="3 3" marker-end="url(#arrow-member)"/>
+  <line x1="298" y1="206" x2="334" y2="206" stroke="#64748b" stroke-width="2" stroke-dasharray="3 3" marker-end="url(#arrow-member)"/>
+  <line x1="448" y1="206" x2="496" y2="144" stroke="#0f8f84" stroke-width="2.5" marker-end="url(#arrow-http)"/>
+  <line x1="620" y1="144" x2="646" y2="144" stroke="#0f8f84" stroke-width="2.5" marker-end="url(#arrow-http)"/>
+
+  <!-- scrape / logs / deploy -->
+  <path d="M375 320 Q420 250 705 170" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arrow-scrape)"/>
+  <path d="M565 320 Q565 250 560 170" fill="none" stroke="#059669" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arrow-logs)"/>
+  <path d="M565 320 Q640 250 705 170" fill="none" stroke="#059669" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow-logs)"/>
+  <path d="M755 320 Q755 250 705 170" fill="none" stroke="#be123c" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arrow-deploy)"/>
+  <path d="M755 320 Q680 250 560 170" fill="none" stroke="#be123c" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow-deploy)"/>
+
+  <text x="480" y="450" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" fill="#0f172a">HTTP: Browser → Ingress → frontend:80 → backend:3000</text>
+  <text x="480" y="474" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#7c3aed">scrape: monitoring → backend · logs: logging → app pods · deploy: cicd → app</text>
+  <text x="480" y="498" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#64748b">NetworkPolicy: default-deny in app · allow Ingress, frontend→backend, scrapes, DNS</text>
+  <text x="480" y="530" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#64748b">make chronicles · manifests/ · docs/networking.md</text>
+</svg>
